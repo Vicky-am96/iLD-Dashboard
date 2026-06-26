@@ -646,7 +646,6 @@
       modal.classList.remove('hidden');
       setTimeout(() => modal.classList.add('opacity-100'), 10);
     }
-    }
 
     // ── BI Drilldown ──────────────────────────────────────────────
     function openMetricDrilldown(metricType) {
@@ -738,12 +737,10 @@
       document.getElementById('bi-kpi-alh').textContent = ul > 0 ? (hrs/ul).toFixed(1) : '0';
       document.getElementById('bi-kpi-courses').textContent = courseSet.size.toLocaleString();
 
-      google.charts.setOnLoadCallback(() => {
-        renderGradeAttendanceChart(currentlyFilteredSubsetCache);
-        renderLobAttendanceChart(currentlyFilteredSubsetCache);
-        renderHoursByPhaseChart(currentlyFilteredSubsetCache);
-        renderModeOfLearningChart(currentlyFilteredSubsetCache);
-      });
+      renderGradeAttendanceChart(currentlyFilteredSubsetCache);
+      renderLobAttendanceChart(currentlyFilteredSubsetCache);
+      renderHoursByPhaseChart(currentlyFilteredSubsetCache);
+      renderModeOfLearningChart(currentlyFilteredSubsetCache);
     }
 
     // ── Charts (click-to-filter enabled) ─────────────────────────
