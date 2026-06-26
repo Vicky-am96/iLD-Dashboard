@@ -3,7 +3,7 @@
 **Project:** Quarterly Learning & Development Dashboard
 **Platform:** Google Apps Script Web App
 **Audience:** Developers, L&D Team, HRBPs, System Admins
-**Last Updated:** June 2026
+**Last Updated:** June 2026 (v2 — pillar detail now reads from each pillar's own Google Sheet)
 
 ---
 
@@ -88,15 +88,20 @@ Google Apps Script Web App
     ▼
 Index.html (rendered in browser)
     │
-    ├─► getDashboardMetadata()     → DASHBOARD_CONFIG → renders pillar cards
-    ├─► getLiveDashboardSummary()  → MIS Base sheet   → renders 4 KPI cards + matrix
+    ├─► getDashboardMetadata()      → DASHBOARD_CONFIG    → renders pillar cards
+    ├─► getLiveDashboardSummary()   → MIS Base sheet      → renders 4 KPI cards + matrix
     │
-    │  (user clicks a KPI card or pillar card)
+    │  (user clicks a KPI card)
+    ├─► getMetricDrilldownData()    → MIS Base sheet      → cached → BI console filters + charts
     │
-    └─► getMetricDrilldownData()   → MIS Base sheet → cached in browser memory
+    │  (user clicks a pillar card)
+    └─► getPillarTabData(name, tab) → that pillar's OWN sheet + specific tab
             │
-            └─► All filter / chart logic runs CLIENT-SIDE on cached data
-                 (no further server calls until the page is refreshed)
+            └─► Smart renderer auto-detects columns:
+                 · Drive URL columns  → image gallery with lightbox
+                 · Numeric columns    → KPI metric badges (summed)
+                 · Text columns       → captions / table data
+                 Each tab result is cached client-side (pillarTabCache)
 ```
 
 ### Three Views in Index.html
@@ -115,18 +120,26 @@ The entire page lives in one HTML file. Three `<div>` sections are toggled visib
 |---|---|---|
 | `globalMetadata` | Page load | Pillar config — used to render cards and tabs |
 | `computedSummaryCache` | Page load | Q1/Q2 summary — sets active quarter filter default |
-| `globalRawLedgerRows` | First KPI click OR first pillar click | Full MIS ledger — all filtering done in-memory |
-| `currentlyFilteredSubsetCache` | Every filter change | Current visible subset — used for CSV export and chart rendering |
+| `globalRawLedgerRows` | First KPI card click | Full MIS Base ledger — used **only** by the BI drilldown console |
+| `currentlyFilteredSubsetCache` | Every filter change in BI console | Current filtered subset — used for CSV export and chart rendering |
+| `pillarTabCache["Name::Tab"]` | First click on each pillar tab | Per-tab data from that pillar's own sheet — keyed by `"PillarName::TabName"` |
 
 ---
 
 ## 5. Google Sheets Structure Required
 
-### Master MIS Sheet
+There are **two distinct types** of sheets used by this dashboard:
 
-Controlled by `MASTER_METRICS_SHEET_ID` in `code.gs`.
+| Sheet Type | Used For | Configured Via |
+|---|---|---|
+| **Master MIS Sheet** | Homepage KPIs, comparison matrix, BI drilldown console | `MASTER_METRICS_SHEET_ID` in `code.gs` |
+| **Per-Pillar Sheets** | Pillar detail view (sub-program tabs, metrics, images) | `id` field per pillar in `DASHBOARD_CONFIG` |
 
-The tab inside that sheet must be named exactly: **`MIS Base`**
+---
+
+### Master MIS Sheet (`MASTER_METRICS_SHEET_ID`)
+
+Tab name must be exactly: **`MIS Base`**
 
 The backend uses **header name matching** (not fixed column positions), so column order can change freely. Row 1 must contain these header names:
 
@@ -139,23 +152,37 @@ The backend uses **header name matching** (not fixed column positions), so colum
 | `Month` | Month filter dropdown |
 | `Type of Training` | TOT filter dropdown |
 | `Schools` | Schools filter dropdown |
-| `Program Name` | Program filter + pillar tab matching |
+| `Program Name` | Program filter in BI console |
 | `Course Name` | Course filter dropdown |
 | `GRADE SERIES` | Grade filter + grade attendance chart |
 | `LOB` | LOB filter + LOB attendance chart |
 | `Product Line` | Included in CSV export |
 | `Training Mode` | Mode of learning chart |
-| `NAME` | Participant name in pillar detail table |
+| `NAME` | Participant name in CSV export |
 
 > **Fallback behaviour:** If a header is not found by name, the backend falls back to a hardcoded column index. Always ensure header names match exactly to avoid silent data errors.
 
-### Attendance Status Values
+**Attendance Status Values:** Only rows where `Attendance Status` = `"present"` (case-insensitive) are counted in KPI calculations.
 
-Only rows where `Attendance Status` = **`present`** (case-insensitive) are counted in KPI calculations.
+**Quarter Column Values:** Accepted formats: `Q1`, `Q2`, `Q1 Detail`, `Q2 Detail`, or any string containing "Q1"/"Q2". Normalised to `"Q1"` or `"Q2"` by the backend.
 
-### Quarter Column Values
+---
 
-Accepted formats: `Q1`, `Q2`, `Q1 Detail`, `Q2 Detail`, or any string containing "Q1"/"Q2". The backend normalises all of these to `"Q1"` or `"Q2"`.
+### Per-Pillar Sheets (one per pillar in `DASHBOARD_CONFIG`)
+
+Each pillar has its own dedicated Google Sheet. The tab names listed in `DASHBOARD_CONFIG.tabs` must exactly match tab names inside that sheet.
+
+**There is no required column structure** — each pillar sheet can have completely different columns. The dashboard auto-detects column types at runtime:
+
+| Column Type Detected | Detection Rule | Rendered As |
+|---|---|---|
+| **Image** | Cell contains `drive.google.com` URL | Gallery card with lightbox zoom |
+| **Numeric metric** | ≥70% of rows have a parseable number | KPI badge on the right panel (summed) |
+| **Text / description** | Everything else | Caption under images, or table column |
+
+**Images must be stored as Google Drive share links in a cell** (not `=IMAGE()` formulas). The backend auto-converts them to thumbnail URLs using `convertDriveLink()`.
+
+**Tab names in `DASHBOARD_CONFIG.tabs` must match the sheet tab name exactly** (case-sensitive). If a tab name doesn't exist in the sheet, an amber error card is shown to the user.
 
 ---
 
@@ -230,7 +257,16 @@ This single sheet powers the homepage KPI cards, comparison matrix, drilldown fi
 - Returns every row from `MIS Base` as a normalised JS object.
 - Skips completely empty rows and rows missing both `EMPID` and `Quarter`.
 - Each row object has keys: `quarter, month, typeOfTraining, schools, programName, courseName, attendanceStatus, gradeSeries, lob, productLine, empId, name, trainingMode, totalHours`
-- Called once (on first KPI or pillar click), then cached in the browser.
+- **Called only by the BI drilldown console** (when a KPI card is clicked). No longer used for pillar detail views.
+- Cached in `globalRawLedgerRows` after first fetch.
+
+#### `getPillarTabData(pillarName, tabName)`
+- Reads from the **pillar's own Google Sheet** (sheet ID from `DASHBOARD_CONFIG[pillarName].id`), specific tab `tabName`.
+- Skips empty rows. Converts any Google Drive URLs in cells to thumbnail URLs automatically.
+- Dates are formatted as `"dd MMM yyyy"` strings.
+- Returns: `{ pillarName, tabName, headers: [...], rows: [{col: val, ...}, ...] }`
+- Returns `{ error: "..." }` if the sheet ID is a placeholder, the tab doesn't exist, or access fails.
+- **Called each time a pillar sub-program tab is clicked** (result cached in `pillarTabCache`).
 
 #### `getRealChartAnalyticsData()` *(available but currently unused)*
 - Pre-computes LOB and Grade training hour aggregations on the server.
@@ -271,13 +307,22 @@ Clears `#pillars-grid` and builds one card per pillar from `DASHBOARD_CONFIG`. R
 Fills the 4 KPI cards and comparison matrix. Active quarter = Q2 if `Q2.lc > 0`, otherwise Q1. Delta = `((Q2 - Q1) / Q1) × 100`.
 
 #### `openPillar(pillarName)`
-Shows `drilldown-view`. Builds sub-program tab buttons from `globalMetadata[pillarName].tabs`. Loads ledger data if not yet cached, then calls `selectPillarTab()`.
+Shows `drilldown-view`. Builds sub-program tab buttons from `globalMetadata[pillarName].tabs`. Immediately calls `selectPillarTab()` for the first tab — **no MIS ledger loading**.
 
 #### `selectPillarTab(pillarName, tabName, btnEl)`
-Highlights the active tab. Filters `globalRawLedgerRows` — matches `tabName` (case-insensitive substring) against `programName`, `courseName`, `schools`, `typeOfTraining`. Passes results to `renderPillarTabContent()`.
+Highlights the active tab. Checks `pillarTabCache["PillarName::TabName"]` — if cached, renders immediately. Otherwise calls `getPillarTabData(pillarName, tabName)` on the backend to fetch from that pillar's own sheet. Shows a loading spinner while fetching.
 
-#### `renderPillarTabContent(rows, tabName)`
-Calculates 4 metrics (present-only for learner/hours). Renders the metrics grid and a data table (max 100 rows) with colour-coded attendance badges. Shows empty state if no rows match.
+#### `renderPillarTabContent(data)`
+Smart renderer — takes the raw `{ headers, rows }` response from the backend and auto-detects column types:
+
+- **If Drive URL columns found → Image Gallery Mode:**
+  - Renders a 2-column grid of cards
+  - Each card: image (clickable → lightbox zoom) + text captions from other columns + numeric values inline
+- **If no Drive URLs → Table Mode:**
+  - Renders a scrollable table showing up to 8 columns, 150 rows
+  - Status values (`Present`, `Absent`, `Completed`, etc.) auto-coloured green/red
+- **Metrics panel (right side):** Numeric columns are summed and shown as dark green KPI badges (max 6 columns + row count)
+- **Error/empty states:** Amber card with message if `data.error` is set; soft empty state if no rows
 
 #### `openMetricDrilldown(metricType)`
 Shows `metric-drilldown-view`. Fetches ledger if not cached, then calls `initializeBIConsoleElements()`.
@@ -340,7 +385,7 @@ Ensures `homepage-view` is visible, calls `window.print()`, then restores the pr
 }
 ```
 
-Tab names must appear as a **substring** in the `Program Name`, `Course Name`, `Schools`, or `Type of Training` column of `MIS Base`. If the match fails, the tab will show "No data found" — check your spelling against the sheet data.
+Tab names must **exactly match the tab name inside that pillar's Google Sheet** (case-sensitive). If the tab name doesn't exist in the sheet, the user will see an amber error card. Check the exact tab name in Google Sheets and copy it precisely.
 
 ### Change a Pillar's Brand Colour
 
@@ -436,13 +481,15 @@ Opened by clicking any KPI card.
 
 ### Pillar Detail View
 
-Opened by clicking a pillar card on the homepage.
+Opened by clicking a pillar card on the homepage. Each pillar reads from **its own dedicated Google Sheet** — not the MIS Base.
 
 | Element | Description |
 |---|---|
-| **Sub-program tabs** | Click to switch between tracks within the pillar |
-| **Metrics panel** (right) | Unique Learners, Total Hours, Avg Hours, Total Records for the selected track |
-| **Data table** (left) | Up to 100 participant records. Green badge = Present, Red badge = Absent |
+| **Sub-program tabs** | Click to switch between tracks. Each tab reads from that tab in the pillar's sheet |
+| **Metrics panel** (right) | Numeric columns from the sheet are auto-summed and shown as KPI badges |
+| **Image gallery** (left) | Shown when the sheet has Google Drive URL columns — each row becomes an image card with caption and lightbox zoom |
+| **Data table** (left) | Shown when no Drive URLs are present — scrollable table of all rows with colour-coded status values |
+| **Amber error card** | Shown if the sheet ID is a placeholder or the tab name doesn't match the actual sheet tab |
 
 ---
 
@@ -483,9 +530,15 @@ Opened by clicking a pillar card on the homepage.
 - Open the browser console (`F12`) and look for JavaScript errors.
 - In Apps Script editor, manually run `getDashboardMetadata()` and check the Logs for output.
 
-### Clicking a pillar card shows "No data found"
-- Expected for pillars whose sheet IDs are still placeholders.
-- Also occurs when the tab name in `DASHBOARD_CONFIG.tabs` doesn't substring-match any value in `Program Name`, `Course Name`, `Schools`, or `Type of Training` in MIS Base. Check your spelling.
+### Pillar card shows amber "Data Not Available" error
+- **Sheet ID is a placeholder:** Replace `"YOUR_TESTIMONIALS_AND_EXPERTS_SHEET_ID_HERE"` in `DASHBOARD_CONFIG` with the real sheet ID.
+- **Tab not found:** The tab name in `DASHBOARD_CONFIG.tabs` must match the actual tab name in that pillar's Google Sheet exactly (case-sensitive, no extra spaces).
+- **Access denied:** The Apps Script account must have **Editor or Viewer access** to the pillar's Google Sheet.
+
+### Pillar images don't appear / show broken image icon
+- Images must be stored as **Google Drive share links** in a cell (e.g. `https://drive.google.com/file/d/...`). The `=IMAGE()` formula is not supported.
+- The Drive file must be shared so the Apps Script account can access it (at least "Anyone with the link can view").
+- Check `convertDriveLink()` in `code.gs` if thumbnail URLs are malformed.
 
 ### Charts are blank
 - Requires an active internet connection (Google Charts loads from CDN).
@@ -510,7 +563,7 @@ Opened by clicking a pillar card on the homepage.
 |---|---|---|
 | Voice of Associates sheet ID | ⚠️ Placeholder | Replace `"YOUR_TESTIMONIALS_AND_EXPERTS_SHEET_ID_HERE"` in `DASHBOARD_CONFIG` |
 | L&D PF Digital Experts sheet ID | ⚠️ Placeholder | Same as above |
-| Pillar detail from per-pillar sheets | Not implemented | Pillar detail tabs currently match only against `MIS Base`. Per-pillar sheets (ECD, eMACH, etc.) are not individually queried yet |
+| Pillar detail from per-pillar sheets | ✅ Implemented | Each pillar tab now reads from its own Google Sheet via `getPillarTabData()` |
 | Q3/Q4 support | Partial | Charts show Q3/Q4 bars but homepage KPIs only calculate Q1 and Q2 |
 | Mobile BI console layout | Basic | Usable but sidebar + charts not fully optimised for small screens |
 | User-level access control | Not implemented | All users with the URL see all data |
