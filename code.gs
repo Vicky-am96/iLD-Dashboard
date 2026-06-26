@@ -390,6 +390,66 @@ function loadPillarCanvas(pillarName) {
 }
 
 
+/**
+ * Reads a specific tab from a pillar's own Google Sheet.
+ * Returns headers + all data rows. Drive URLs are auto-converted to thumbnail URLs.
+ * Column names vary per pillar — the frontend renders intelligently based on what it receives.
+ */
+function getPillarTabData(pillarName, tabName) {
+  try {
+    const cfg = DASHBOARD_CONFIG[pillarName];
+    if (!cfg) return { error: 'Pillar "' + pillarName + '" not found in config.' };
+
+    const sheetId = cfg.id;
+    if (!sheetId || sheetId.includes('YOUR_')) {
+      return { error: 'Sheet ID for "' + pillarName + '" is not configured yet. Update DASHBOARD_CONFIG in code.gs.' };
+    }
+
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sheet = ss.getSheetByName(tabName);
+    if (!sheet) {
+      return { error: 'Tab "' + tabName + '" not found in the "' + pillarName + '" sheet.' };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    if (data.length === 0) return { headers: [], rows: [] };
+
+    const headers = data[0].map(h => String(h === null || h === undefined ? '' : h).trim());
+
+    const rows = [];
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      // Skip completely empty rows
+      if (!row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '')) continue;
+
+      const rowObj = {};
+      headers.forEach((h, idx) => {
+        let val = row[idx];
+        if (val === null || val === undefined) {
+          val = '';
+        } else if (typeof val === 'object' && val instanceof Date) {
+          val = Utilities.formatDate(val, Session.getScriptTimeZone(), 'dd MMM yyyy');
+        } else {
+          val = String(val).trim();
+          // Auto-convert Google Drive share links to thumbnail URLs for image display
+          if (val.includes('drive.google.com')) {
+            val = convertDriveLink(val);
+          }
+        }
+        rowObj[h] = val;
+      });
+      rows.push(rowObj);
+    }
+
+    return { pillarName, tabName, headers, rows };
+
+  } catch (err) {
+    Logger.log('getPillarTabData error: ' + err.toString());
+    return { error: err.toString() };
+  }
+}
+
+
 function getLastRefreshedTimestamp() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd MMM yyyy, hh:mm a");
 }

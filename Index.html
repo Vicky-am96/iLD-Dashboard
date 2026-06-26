@@ -293,8 +293,9 @@
     // ── Global state ──────────────────────────────────────────────
     let globalMetadata = {};
     let computedSummaryCache = null;
-    let globalRawLedgerRows = [];
+    let globalRawLedgerRows = [];       // MIS Base ledger — only used for BI drilldown console
     let currentlyFilteredSubsetCache = [];
+    let pillarTabCache = {};            // Cache: "PillarName::TabName" → data from pillar's own sheet
 
     google.charts.load('current', { packages: ['corechart'] });
 
@@ -439,7 +440,7 @@
       });
     }
 
-    // ── Open pillar detail view ───────────────────────────────────
+    // ── Open pillar detail view (reads from each pillar's own sheet) ─
     function openPillar(pillarName) {
       const cfg = globalMetadata[pillarName];
       if (!cfg) return;
@@ -462,30 +463,17 @@
         nav.appendChild(btn);
       });
 
-      // Load first tab — use cached ledger if available, else fetch
-      const loadTab = () => selectPillarTab(pillarName, (cfg.tabs || [])[0], nav.firstChild);
-      if (globalRawLedgerRows.length > 0) {
-        loadTab();
-      } else {
-        document.getElementById('insights-magazine-canvas').innerHTML = `
-          <div class="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-10 text-center">
-            <svg class="animate-spin h-6 w-6 text-[#12341D] mx-auto mb-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading MIS data…</p>
-          </div>`;
-        google.script.run
-          .withSuccessHandler(rows => {
-            globalRawLedgerRows = rows || [];
-            loadTab();
-          })
-          .getMetricDrilldownData();
+      // Load the first tab from this pillar's own Google Sheet
+      if (cfg.tabs && cfg.tabs.length > 0) {
+        selectPillarTab(pillarName, cfg.tabs[0], nav.firstChild);
       }
     }
 
-    // ── Select a sub-program tab ──────────────────────────────────
+    // ── Select a sub-program tab — fetches from pillar's own sheet ──
     function selectPillarTab(pillarName, tabName, btnEl) {
       if (!tabName) return;
 
-      // Update tab button active styles
+      // Highlight active tab button
       document.querySelectorAll('#subprogram-horizontal-navbar button').forEach(b => {
         b.className = 'px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition whitespace-nowrap bg-slate-100 text-slate-600 hover:bg-slate-200';
       });
@@ -493,87 +481,171 @@
 
       document.getElementById('active-tab-header').textContent = tabName;
 
-      // Filter ledger rows by matching program/course/schools to the tab name
-      const tabLower = tabName.toLowerCase();
-      const matched = globalRawLedgerRows.filter(r =>
-        (r.programName || '').toLowerCase().includes(tabLower) ||
-        (r.courseName || '').toLowerCase().includes(tabLower) ||
-        (r.schools || '').toLowerCase().includes(tabLower) ||
-        (r.typeOfTraining || '').toLowerCase().includes(tabLower)
-      );
-
-      renderPillarTabContent(matched, tabName);
-    }
-
-    // ── Render pillar tab metrics + data table ────────────────────
-    function renderPillarTabContent(rows, tabName) {
-      const present = rows.filter(r => (r.attendanceStatus || '').toLowerCase().includes('present'));
-      const ul = new Set(present.map(r => r.empId)).size;
-      const tlh = present.reduce((s, r) => s + r.totalHours, 0);
-      const alh = ul > 0 ? tlh / ul : 0;
-
-      document.getElementById('metrics-badges-grid').innerHTML = `
-        <div class="bg-[#12341D] text-white p-4 rounded-xl text-center border-b-4 border-[#AE7F2E]">
-          <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Unique Learners</p>
-          <h4 class="text-2xl font-black mt-1 text-[#E1B58E]">${ul.toLocaleString()}</h4>
-        </div>
-        <div class="bg-[#12341D] text-white p-4 rounded-xl text-center border-b-4 border-[#AE7F2E]">
-          <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Total Hours</p>
-          <h4 class="text-2xl font-black mt-1 text-[#E1B58E]">${tlh >= 1000 ? (tlh/1000).toFixed(1)+'K' : tlh.toFixed(0)}</h4>
-        </div>
-        <div class="bg-[#12341D] text-white p-4 rounded-xl text-center border-b-4 border-[#AE7F2E]">
-          <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Avg Hours</p>
-          <h4 class="text-2xl font-black mt-1 text-[#E1B58E]">${alh.toFixed(1)}</h4>
-        </div>
-        <div class="bg-[#12341D] text-white p-4 rounded-xl text-center border-b-4 border-[#AE7F2E]">
-          <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Total Records</p>
-          <h4 class="text-2xl font-black mt-1 text-[#E1B58E]">${rows.length.toLocaleString()}</h4>
+      // Show loading state in canvas
+      document.getElementById('insights-magazine-canvas').innerHTML = `
+        <div class="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-10 text-center">
+          <svg class="animate-spin h-6 w-6 text-[#12341D] mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading ${tabName}…</p>
         </div>`;
+      document.getElementById('metrics-badges-grid').innerHTML = '';
 
-      const canvas = document.getElementById('insights-magazine-canvas');
+      const cacheKey = pillarName + '::' + tabName;
 
-      if (rows.length === 0) {
-        canvas.innerHTML = `
-          <div class="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-10 text-center">
-            <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">No data found for this track</p>
-            <p class="text-xs text-slate-300 mt-1">This pillar's data may live in a separate Google Sheet not yet connected to the MIS ledger.</p>
-          </div>`;
+      // Use cached data if available
+      if (pillarTabCache[cacheKey]) {
+        renderPillarTabContent(pillarTabCache[cacheKey]);
         return;
       }
 
-      const tableRows = rows.slice(0, 100).map(r => `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="p-2.5 font-medium text-slate-800">${r.name}</td>
-          <td class="p-2.5 text-slate-500">${r.empId}</td>
-          <td class="p-2.5">${r.gradeSeries}</td>
-          <td class="p-2.5">${r.lob}</td>
-          <td class="p-2.5 text-center">
-            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${(r.attendanceStatus||'').toLowerCase().includes('present') ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
-              ${r.attendanceStatus}
-            </span>
-          </td>
-          <td class="p-2.5 text-right font-semibold">${r.totalHours}</td>
-        </tr>`).join('');
+      // Fetch from this pillar's own Google Sheet
+      google.script.run
+        .withSuccessHandler(data => {
+          pillarTabCache[cacheKey] = data;
+          renderPillarTabContent(data);
+        })
+        .withFailureHandler(err => {
+          document.getElementById('insights-magazine-canvas').innerHTML = `
+            <div class="bg-rose-50 border border-rose-200 rounded-2xl p-8 text-center">
+              <p class="text-sm font-bold text-rose-600">Failed to load data</p>
+              <p class="text-xs text-rose-400 mt-1">${err.message || 'Unknown error'}</p>
+            </div>`;
+        })
+        .getPillarTabData(pillarName, tabName);
+    }
 
-      canvas.innerHTML = `
-        <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-          <div class="overflow-x-auto">
-            <table class="w-full text-xs">
-              <thead>
-                <tr class="bg-[#12341D] text-white text-[10px] uppercase tracking-wider">
-                  <th class="p-2.5 text-left">Name</th>
-                  <th class="p-2.5 text-left">EMP ID</th>
-                  <th class="p-2.5 text-left">Grade</th>
-                  <th class="p-2.5 text-left">LOB</th>
-                  <th class="p-2.5 text-center">Status</th>
-                  <th class="p-2.5 text-right">Hours</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-50">${tableRows}</tbody>
-            </table>
-          </div>
-          ${rows.length > 100 ? `<div class="p-3 text-center text-xs text-slate-400 font-semibold border-t">Showing 100 of ${rows.length} records</div>` : ''}
-        </div>`;
+    // ── Smart renderer — handles images, metrics, and learner tables ─
+    function renderPillarTabContent(data) {
+      const canvas = document.getElementById('insights-magazine-canvas');
+      const metricsGrid = document.getElementById('metrics-badges-grid');
+
+      // Handle error response from backend
+      if (data.error) {
+        canvas.innerHTML = `
+          <div class="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
+            <p class="text-sm font-bold text-amber-700 uppercase tracking-widest">Data Not Available</p>
+            <p class="text-xs text-amber-500 mt-2">${data.error}</p>
+          </div>`;
+        metricsGrid.innerHTML = '';
+        return;
+      }
+
+      const { headers, rows } = data;
+
+      if (!rows || rows.length === 0) {
+        canvas.innerHTML = `
+          <div class="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-10 text-center">
+            <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">No data in this tab</p>
+            <p class="text-xs text-slate-300 mt-1">Add data to this tab in the Google Sheet and it will appear here.</p>
+          </div>`;
+        metricsGrid.innerHTML = '';
+        return;
+      }
+
+      // ── Classify each column ──────────────────────────────────────
+      const imageColumns = headers.filter(h => h && rows.some(r => {
+        const v = String(r[h] || '');
+        return v.includes('drive.google.com') || v.match(/\.(jpg|jpeg|png|gif|webp)/i);
+      }));
+
+      const numericColumns = headers.filter(h => {
+        if (!h || imageColumns.includes(h)) return false;
+        const vals = rows.map(r => r[h]).filter(v => v !== '' && v !== null);
+        const numericCount = vals.filter(v => !isNaN(parseFloat(v))).length;
+        return vals.length > 0 && numericCount / vals.length >= 0.7;
+      });
+
+      const textColumns = headers.filter(h => h && !imageColumns.includes(h) && !numericColumns.includes(h));
+
+      // ── Render metrics panel (right side) ────────────────────────
+      const metricBadges = numericColumns.slice(0, 6).map(h => {
+        const vals = rows.map(r => parseFloat(r[h]) || 0);
+        const total = vals.reduce((s, v) => s + v, 0);
+        const display = total >= 1000 ? (total / 1000).toFixed(1) + 'K' : total % 1 === 0 ? total.toLocaleString() : total.toFixed(1);
+        return `
+          <div class="bg-[#12341D] text-white p-4 rounded-xl text-center border-b-4 border-[#AE7F2E]">
+            <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest leading-tight">${h}</p>
+            <h4 class="text-2xl font-black mt-1 text-[#E1B58E]">${display}</h4>
+          </div>`;
+      });
+
+      // Always show row count as one badge
+      metricBadges.push(`
+        <div class="bg-[#12341D] text-white p-4 rounded-xl text-center border-b-4 border-[#AE7F2E]">
+          <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Total Records</p>
+          <h4 class="text-2xl font-black mt-1 text-[#E1B58E]">${rows.length.toLocaleString()}</h4>
+        </div>`);
+
+      metricsGrid.innerHTML = metricBadges.join('');
+
+      // ── Render content canvas (left side) ────────────────────────
+      if (imageColumns.length > 0) {
+        // IMAGE / GALLERY MODE — Drive links detected
+        const cards = rows.map(row => {
+          const imgUrl = row[imageColumns[0]] || '';
+          const caption = textColumns.map(h => row[h]).filter(v => v && v !== 'N/A').join(' — ');
+          const extraMetrics = numericColumns.map(h => `<span class="text-[10px] font-bold text-[#AE7F2E]">${h}: <span class="text-slate-700">${row[h]}</span></span>`).join('<span class="mx-1 text-slate-300">·</span>');
+
+          return `
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              ${imgUrl ? `
+                <div class="cursor-zoom-in" onclick="openLightbox('${imgUrl.replace(/'/g, "\\'")}')">
+                  <img src="${imgUrl}" alt="${caption}" class="w-full object-cover" style="max-height:220px"
+                       onerror="this.parentElement.style.display='none'">
+                </div>` : ''}
+              ${caption || extraMetrics ? `
+                <div class="p-4 space-y-1.5">
+                  ${caption ? `<p class="text-sm font-semibold text-slate-800 leading-snug">${caption}</p>` : ''}
+                  ${extraMetrics ? `<div class="flex flex-wrap gap-2 pt-1">${extraMetrics}</div>` : ''}
+                </div>` : ''}
+            </div>`;
+        }).join('');
+
+        canvas.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">${cards}</div>`;
+
+      } else {
+        // TABLE MODE — no images, render as scrollable data table
+        const colsToShow = [...textColumns, ...numericColumns].filter(h => h).slice(0, 8);
+
+        const headerRow = colsToShow.map(h => `<th class="p-2.5 text-left whitespace-nowrap">${h}</th>`).join('');
+        const dataRows = rows.slice(0, 150).map(row => {
+          const cells = colsToShow.map(h => {
+            const v = row[h] || '';
+            // Colour-code attendance/status-like values
+            if (/^(present|completed|pass|active|yes)$/i.test(v)) {
+              return `<td class="p-2.5"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-emerald-100 text-emerald-700">${v}</span></td>`;
+            }
+            if (/^(absent|failed|inactive|no|pending)$/i.test(v)) {
+              return `<td class="p-2.5"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-rose-100 text-rose-700">${v}</span></td>`;
+            }
+            return `<td class="p-2.5 text-slate-700">${v}</td>`;
+          }).join('');
+          return `<tr class="hover:bg-slate-50 transition">${cells}</tr>`;
+        }).join('');
+
+        canvas.innerHTML = `
+          <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs">
+                <thead><tr class="bg-[#12341D] text-white text-[10px] uppercase tracking-wider">${headerRow}</tr></thead>
+                <tbody class="divide-y divide-slate-50">${dataRows}</tbody>
+              </table>
+            </div>
+            ${rows.length > 150 ? `<div class="p-3 text-center text-xs text-slate-400 font-semibold border-t">Showing 150 of ${rows.length} records</div>` : ''}
+          </div>`;
+      }
+    }
+
+    // ── Lightbox helpers ─────────────────────────────────────────
+    function openLightbox(imgUrl) {
+      const modal = document.getElementById('lightbox-modal');
+      const img = document.getElementById('lightbox-target-img');
+      img.src = imgUrl;
+      modal.classList.remove('hidden');
+      setTimeout(() => modal.classList.add('opacity-100'), 10);
+    }
     }
 
     // ── BI Drilldown ──────────────────────────────────────────────
