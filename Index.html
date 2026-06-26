@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quarterly Learning Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700;800;900&display=swap');
+    * { font-family: 'Inter', sans-serif !important; }
+    body { background-color: #F8FAFC; }
+    .interactive-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .interactive-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px 10px rgba(18, 52, 29, 0.08); }
+    .metric-card-interactive { cursor: pointer; transition: all 0.25s ease; }
+    .metric-card-interactive:hover { transform: scale(1.02); box-shadow: 0 10px 20px rgba(174, 127, 46, 0.12); }
+    .skeleton-pulse { background: #E2E8F0; animation: pulse 1.5s infinite ease-in-out; }
+    @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800 antialiased">
+
+
+  <header id="main-header" class="bg-[#12341D] text-white py-6 px-8 shadow-md flex justify-between items-center border-b-4 border-[#AE7F2E]">
+    <div>
+      <h1 class="text-2xl lg:text-3xl font-extrabold tracking-tight">Quarterly Learning Dashboard</h1>
+      <p id="header-subtitle" class="text-xs text-[#E1B58E] tracking-widest uppercase font-semibold mt-1">Accelerated Operations Enterprise Analytics</p>
+    </div>
+    <div class="text-right hidden sm:block">
+      <span id="active-stream-badge" class="text-xs bg-[#AE7F2E] text-white px-4 py-1.5 rounded-lg font-bold tracking-wider uppercase">Live Stream</span>
+    </div>
+  </header>
+
+
+  <main class="flex-1 max-w-[90rem] w-full mx-auto p-4 lg:p-6 space-y-8">
+   
+    <div id="homepage-view" class="space-y-8">
+      <div class="space-y-4">
+        <h2 class="text-xs font-bold text-[#21552F] uppercase tracking-widest border-b border-[#21552F]/20 pb-2">Active Quarter Snapshots <span id="snapshot-quarter-label" class="text-[10px] text-[#AE7F2E] font-black uppercase ml-2">Loading Quarter Context...</span></h2>
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div onclick="openMetricDrilldown('lc')" class="metric-card-interactive bg-white p-6 rounded-2xl border border-[#AE7F2E]/40 border-l-4 border-l-[#AE7F2E] shadow-sm text-center flex flex-col items-center justify-center">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Learner Count (LC)</p>
+            <h3 id="stat-lc" class="text-3xl font-black text-[#12341D] mt-2"><div class="h-8 w-20 skeleton-pulse rounded-lg mx-auto"></div></h3>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-semibold mt-2 inline-block">Active Count</span>
+          </div>
+          <div onclick="openMetricDrilldown('ul')" class="metric-card-interactive bg-white p-6 rounded-2xl border border-[#AE7F2E]/40 border-l-4 border-l-[#21552F] shadow-sm text-center flex flex-col items-center justify-center">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Unique Attendance (UL)</p>
+            <h3 id="stat-ul" class="text-3xl font-black text-[#12341D] mt-2"><div class="h-8 w-16 skeleton-pulse rounded-lg mx-auto"></div></h3>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-semibold mt-2 inline-block">Unique Footfall</span>
+          </div>
+          <div onclick="openMetricDrilldown('tlh')" class="metric-card-interactive bg-white p-6 rounded-2xl border border-[#AE7F2E]/40 border-l-4 border-l-[#478159] shadow-sm text-center flex flex-col items-center justify-center">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Learning Hours</p>
+            <h3 id="stat-tlh" class="text-3xl font-black text-[#12341D] mt-2"><div class="h-8 w-24 skeleton-pulse rounded-lg mx-auto"></div></h3>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-semibold mt-2 inline-block">Accumulated Hours</span>
+          </div>
+          <div onclick="openMetricDrilldown('alh')" class="metric-card-interactive bg-white p-6 rounded-2xl border border-[#AE7F2E]/40 border-l-4 border-l-[#E1B58E] shadow-sm text-center flex flex-col items-center justify-center">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Average Learning Hours</p>
+            <h3 id="stat-alh" class="text-3xl font-black text-[#12341D] mt-2"><div class="h-8 w-12 skeleton-pulse rounded-lg mx-auto"></div></h3>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-semibold mt-2 inline-block">Per Associate</span>
+          </div>
+        </section>
+      </div>
+
+
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-[#AE7F2E]/40 space-y-4 w-full">
+        <h3 class="text-sm font-bold text-[#12341D] uppercase tracking-wider border-b border-slate-100 pb-2">Quarter Review Comparison Matrix</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-center text-xs text-slate-600">
+            <thead>
+              <tr class="bg-[#12341D] text-white uppercase tracking-wider text-[10px]">
+                <th class="p-4 text-center rounded-l-lg">Metric Aspect</th>
+                <th class="p-4 text-center">Q1 Running Data</th>
+                <th class="p-4 text-center">Q2 Running Data</th>
+                <th class="p-4 text-center rounded-r-lg">% Variance Delta</th>
+              </tr>
+            </thead>
+            <tbody id="matrix-tbody" class="divide-y divide-slate-100 font-medium text-slate-700 text-sm">
+              <tr><td colspan="4" class="p-6 text-center text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Running Calculations...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+
+      <div class="space-y-4">
+        <h2 class="text-xs font-bold text-[#21552F] uppercase tracking-widest border-b border-[#21552F]/20 pb-2">Organizational Strategic Framework Pillars & Teams</h2>
+        <div id="pillars-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="border border-[#AE7F2E]/30 rounded-2xl shadow-sm overflow-hidden flex flex-col bg-white"><?!= include('Pillar_ECD'); ?></div>
+          <div class="border border-[#AE7F2E]/30 rounded-2xl shadow-sm overflow-hidden flex flex-col bg-white"><?!= include('Pillar_EMACH'); ?></div>
+          <div class="border border-[#AE7F2E]/30 rounded-2xl shadow-sm overflow-hidden flex flex-col bg-white"><?!= include('Pillar_PF'); ?></div>
+          <div class="border border-[#AE7F2E]/30 rounded-2xl shadow-sm overflow-hidden flex flex-col bg-white"><?!= include('Pillar_Skill'); ?></div>
+          <div class="border border-[#AE7F2E]/30 rounded-2xl shadow-sm overflow-hidden flex flex-col bg-white"><?!= include('Pillar_Managerial'); ?></div>
+          <div class="border border-[#AE7F2E]/30 rounded-2xl shadow-sm overflow-hidden flex flex-col bg-white"><?!= include('Pillar_Leadership'); ?></div>
+          <div class="border border-[#AE7F2E]/30 rounded-2xl shadow-sm overflow-hidden flex flex-col bg-white"><?!= include('Pillar_Testimonials'); ?></div>
+          <div class="border border-[#AE7F2E]/30 rounded-2xl shadow-sm overflow-hidden flex flex-col bg-white"><?!= include('Pillar_DigitalExperts'); ?></div>
+        </div>
+      </div>
+    </div>
+
+
+    <div id="metric-drilldown-view" class="hidden space-y-6">
+     
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-200 gap-4">
+        <button onclick="exitMetricDrilldown()" class="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-[#12341D] transition max-w-max">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg> Return to Dashboard Hub
+        </button>
+        <span id="drilldown-active-metric-title" class="text-xs font-bold text-white bg-[#12341D] px-4 py-1.5 rounded-lg border border-[#AE7F2E] uppercase tracking-widest text-center">LEARNER COUNT (LC) - EXECUTIVE ANALYTICS WORKSTATION</span>
+      </div>
+
+
+      <div id="drilldown-loading-placeholder" class="bg-white rounded-2xl p-20 text-center border border-slate-200 shadow-sm flex flex-col items-center justify-center space-y-3">
+        <svg class="animate-spin h-8 w-8 text-[#12341D]" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        <p class="text-xs font-bold tracking-widest text-slate-400 uppercase">Parsing Global MIS Data Ledger Array...</p>
+      </div>
+
+
+      <div id="drilldown-tables-workspace" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+       
+        <div class="lg:col-span-3 bg-[#12341D] p-5 rounded-2xl shadow-md space-y-5 text-white border-b-8 border-[#AE7F2E]">
+         
+          <button onclick="downloadFilteredBIEngineCSV()" class="w-full bg-[#AE7F2E] hover:bg-[#cda44b] text-white py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider shadow transition-all flex items-center justify-center gap-2 border border-white/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download Filtered Data (.CSV)
+          </button>
+
+
+          <div class="border-b border-white/20 pb-1">
+            <h3 class="text-xs font-black tracking-widest uppercase text-[#E1B58E]">Dashboard Filters</h3>
+          </div>
+         
+          <div class="space-y-4 text-xs font-semibold text-slate-900">
+            <div class="space-y-1.5">
+              <label class="text-[10px] text-slate-300 uppercase tracking-wider block">Quarter</label>
+              <select id="filter-quarter" onchange="applyGlobalBIWorkspaceFilters()" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 font-medium"></select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[10px] text-slate-300 uppercase tracking-wider block">Month</label>
+              <select id="filter-month" onchange="applyGlobalBIWorkspaceFilters()" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 font-medium"></select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[10px] text-slate-300 uppercase tracking-wider block">Type Of Training (TOT)</label>
+              <select id="filter-tot" onchange="applyGlobalBIWorkspaceFilters()" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 font-medium"></select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[10px] text-slate-300 uppercase tracking-wider block">Line Of Business (LOB)</label>
+              <select id="filter-lob" onchange="applyGlobalBIWorkspaceFilters()" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 font-medium"></select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[10px] text-slate-300 uppercase tracking-wider block">Course Name</label>
+              <select id="filter-course" onchange="applyGlobalBIWorkspaceFilters()" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 font-medium"></select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[10px] text-slate-300 uppercase tracking-wider block">Attendance Status</label>
+              <select id="filter-attendance" onchange="applyGlobalBIWorkspaceFilters()" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 font-medium"></select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[10px] text-slate-300 uppercase tracking-wider block">Schools</label>
+              <select id="filter-schools" onchange="applyGlobalBIWorkspaceFilters()" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 font-medium"></select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[10px] text-slate-300 uppercase tracking-wider block">Grade Series</label>
+              <select id="filter-grade" onchange="applyGlobalBIWorkspaceFilters()" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 font-medium"></select>
+            </div>
+          </div>
+
+
+          <div class="bg-black/20 p-4 rounded-xl border border-white/10 text-center space-y-1">
+            <span class="text-[10px] text-[#E1B58E] font-bold uppercase tracking-widest block">Record Count</span>
+            <div id="bi-record-count" class="text-2xl font-black text-white tracking-tight">0</div>
+          </div>
+        </div>
+
+
+        <div class="lg:col-span-9 space-y-6">
+         
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-[#12341D] text-white p-5 rounded-xl text-center border-b-4 border-[#AE7F2E] shadow-sm">
+              <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Unique Learners</p>
+              <h4 id="bi-kpi-ul" class="text-2xl font-black tracking-tight mt-1 text-[#E1B58E]">0</h4>
+            </div>
+            <div class="bg-[#12341D] text-white p-5 rounded-xl text-center border-b-4 border-[#AE7F2E] shadow-sm">
+              <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Total Training Hrs</p>
+              <h4 id="bi-kpi-tlh" class="text-2xl font-black tracking-tight mt-1 text-[#E1B58E]">0</h4>
+            </div>
+            <div class="bg-[#12341D] text-white p-5 rounded-xl text-center border-b-4 border-[#AE7F2E] shadow-sm">
+              <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Avg Training Hours</p>
+              <h4 id="bi-kpi-alh" class="text-2xl font-black tracking-tight mt-1 text-[#E1B58E]">0</h4>
+            </div>
+            <div class="bg-[#12341D] text-white p-5 rounded-xl text-center border-b-4 border-[#AE7F2E] shadow-sm">
+              <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Courses Delivered</p>
+              <h4 id="bi-kpi-courses" class="text-2xl font-black tracking-tight mt-1 text-[#E1B58E]">0</h4>
+            </div>
+          </div>
+
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+              <h4 class="text-xs font-bold text-[#12341D] uppercase tracking-wider mb-2 border-b pb-1.5">Grade wise Attendance status</h4>
+              <div id="chart-bi-grade-attendance" class="w-full h-64"></div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+              <h4 class="text-xs font-bold text-[#12341D] uppercase tracking-wider mb-2 border-b pb-1.5">LOB wise Attendance Status</h4>
+              <div id="chart-bi-lob-attendance" class="w-full h-64"></div>
+            </div>
+          </div>
+
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+              <h4 class="text-xs font-bold text-[#12341D] uppercase tracking-wider mb-2 border-b pb-1.5">Learning hours by phase</h4>
+              <div id="chart-bi-hours-phase" class="w-full h-64"></div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+              <h4 class="text-xs font-bold text-[#12341D] uppercase tracking-wider mb-2 border-b pb-1.5">Mode of Learning</h4>
+              <div id="chart-bi-mode" class="w-full h-64"></div>
+            </div>
+          </div>
+
+
+        </div>
+      </div>
+    </div>
+
+
+    <div id="drilldown-view" class="hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-200 gap-4">
+        <button onclick="showHomepage()" class="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-[#12341D] transition max-w-max">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg> Return to Hub Menu
+        </button>
+        <span id="active-pillar-title" class="text-xs font-bold text-[#12341D] uppercase tracking-widest bg-slate-50 px-4 py-1.5 rounded-lg border border-slate-100 text-center">Active Pillar</span>
+      </div>
+      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+        <nav id="subprogram-horizontal-navbar" class="flex items-center space-x-2 min-w-max pb-1 sm:pb-0"></nav>
+      </div>
+      <div class="space-y-4">
+        <h2 id="active-tab-header" class="text-2xl lg:text-3xl font-extrabold text-[#12341D] tracking-tight">Sub Program Dashboard</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 items-start">
+          <div class="lg:col-span-6 space-y-6">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Descriptive Updates & Artifacts</h3>
+            <div id="insights-magazine-canvas" class="space-y-6"></div>
+          </div>
+          <div class="lg:col-span-4 space-y-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-2">Quantifiable Analytics</h3>
+            <div id="metrics-badges-grid" class="grid grid-cols-2 gap-4"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+
+  <div id="lightbox-modal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4" onclick="closeLightbox()">
+    <img id="lightbox-target-img" src="" class="max-w-full max-h-[85vh] rounded-xl object-contain shadow-2xl">
+  </div>
+
+
+  <script>
+    let globalMetadata = {};
+    let computedSummaryCache = null;
+    let globalRawLedgerRows = [];
+    let currentlyFilteredSubsetCache = []; // Global cache placeholder tracking current live filtered slice
+
+
+    google.charts.load('current', {'packages':['corechart']});
+
+
+    window.addEventListener('DOMContentLoaded', () => {
+      google.script.run.withSuccessHandler(metadata => {
+        globalMetadata = metadata;
+      }).getDashboardMetadata();
+
+
+      google.script.run.withSuccessHandler(summary => {
+        if (summary.error) return;
+        computedSummaryCache = summary;
+        renderTopStats(summary);
+      }).getLiveDashboardSummary();
+    });
+
+
+    function renderTopStats(summary) {
+      const targetQuarter = (summary.Q2 && summary.Q2.lc > 0) ? "Q2" : "Q1";
+      document.getElementById('snapshot-quarter-label').innerText = `Displaying Real-time ${targetQuarter} Metrics Log`;
+      document.getElementById('active-stream-badge').innerText = `Live MIS (${targetQuarter})`;
+
+
+      const activeSet = summary[targetQuarter];
+      document.getElementById('stat-lc').innerText = activeSet.lc.toLocaleString();
+      document.getElementById('stat-ul').innerText = activeSet.ul.toLocaleString();
+      document.getElementById('stat-tlh').innerText = activeSet.tlh.toLocaleString();
+      document.getElementById('stat-alh').innerText = activeSet.alh.toFixed(1);
+
+
+      const matrixTbody = document.getElementById('matrix-tbody');
+      matrixTbody.innerHTML = '';
+
+
+      const rowsMeta = [
+        { title: "Learner Count (LC)", key: "lc" },
+        { title: "Unique Attendance (UL)", key: "ul" },
+        { title: "Total Learning Hours (TLH)", key: "tlh" },
+        { title: "Average Learning Hours (ALH)", key: "alh" }
+      ];
+
+
+      rowsMeta.forEach(m => {
+        const q1Val = summary.Q1 ? summary.Q1[m.key] : 0;
+        const q2Val = summary.Q2 ? summary.Q2[m.key] : 0;
+        const delta = q1Val > 0 ? (((q2Val - q1Val) / q1Val) * 100).toFixed(1) : "0.0";
+        const deltaColor = parseFloat(delta) >= 0 ? "text-emerald-600 bg-emerald-50/40" : "text-rose-600 bg-rose-50/40";
+        const sign = parseFloat(delta) >= 0 ? "+" : "";
+
+
+        matrixTbody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition text-center">
+            <td class="p-4 font-bold text-slate-900 text-center">${m.title}</td>
+            <td class="p-4 text-center">${q1Val.toLocaleString()}</td>
+            <td class="p-4 font-semibold text-center">${q2Val.toLocaleString()}</td>
+            <td class="p-4 font-bold ${deltaColor} text-center">${sign}${delta}%</td>
+          </tr>
+        `;
+      });
+    }
+
+
+    function openMetricDrilldown(metricType) {
+      document.getElementById('homepage-view').classList.add('hidden');
+      document.getElementById('metric-drilldown-view').classList.remove('hidden');
+      document.getElementById('drilldown-loading-placeholder').classList.remove('hidden');
+      document.getElementById('drilldown-tables-workspace').classList.add('hidden');
+
+
+      if (globalRawLedgerRows && globalRawLedgerRows.length > 0) {
+        initializeBIConsoleElements(metricType);
+      } else {
+        google.script.run.withSuccessHandler(ledgerRows => {
+          globalRawLedgerRows = ledgerRows || [];
+          initializeBIConsoleElements(metricType);
+        }).getMetricDrilldownData();
+      }
+    }
+
+
+    function initializeBIConsoleElements(initialMetric) {
+      document.getElementById('drilldown-loading-placeholder').classList.add('hidden');
+      document.getElementById('drilldown-tables-workspace').classList.remove('hidden');
+
+
+      populateDropdownOptions('filter-quarter', 'quarter', 'All Quarters');
+      populateDropdownOptions('filter-month', 'month', 'All Months');
+      populateDropdownOptions('filter-tot', 'typeOfTraining', 'All Type of Trainings');
+      populateDropdownOptions('filter-lob', 'lob', 'All LOBs');
+      populateDropdownOptions('filter-course', 'courseName', 'All Course Names');
+      populateDropdownOptions('filter-attendance', 'attendanceStatus', 'All Statuses');
+      populateDropdownOptions('filter-schools', 'schools', 'All Schools');
+      populateDropdownOptions('filter-grade', 'gradeSeries', 'All Grade Series');
+
+
+      if (computedSummaryCache) {
+        const activeQuarter = (computedSummaryCache.Q2 && computedSummaryCache.Q2.lc > 0) ? "Q2" : "Q1";
+        document.getElementById('filter-quarter').value = activeQuarter;
+      }
+
+
+      applyGlobalBIWorkspaceFilters();
+    }
+
+
+    function populateDropdownOptions(elementId, columnKey, placeholderText) {
+      const select = document.getElementById(elementId);
+      const previousValue = select.value;
+      select.innerHTML = `<option value="ALL">${placeholderText}</option>`;
+     
+      let uniqueValues = new Set();
+      globalRawLedgerRows.forEach(row => {
+        if (row[columnKey] && row[columnKey].toString().toLowerCase() !== 'unknown') {
+          uniqueValues.add(row[columnKey].toString().trim());
+        }
+      });
+
+
+      Array.from(uniqueValues).sort().forEach(val => {
+        select.innerHTML += `<option value="${val}">${val}</option>`;
+      });
+
+
+      if (previousValue && Array.from(uniqueValues).includes(previousValue)) {
+        select.value = previousValue;
+      }
+    }
+
+
+    function applyGlobalBIWorkspaceFilters() {
+      const qSel = document.getElementById('filter-quarter').value;
+      const mSel = document.getElementById('filter-month').value;
+      const totSel = document.getElementById('filter-tot').value;
+      const lobSel = document.getElementById('filter-lob').value;
+      const cSel = document.getElementById('filter-course').value;
+      const attSel = document.getElementById('filter-attendance').value;
+      const schSel = document.getElementById('filter-schools').value;
+      const grdSel = document.getElementById('filter-grade').value;
+
+
+      currentlyFilteredSubsetCache = globalRawLedgerRows.filter(r => {
+        if (qSel !== 'ALL' && r.quarter !== qSel) return false;
+        if (mSel !== 'ALL' && r.month !== mSel) return false;
+        if (totSel !== 'ALL' && r.typeOfTraining !== totSel) return false;
+        if (lobSel !== 'ALL' && r.lob !== lobSel) return false;
+        if (cSel !== 'ALL' && r.courseName !== cSel) return false;
+        if (attSel !== 'ALL' && r.attendanceStatus !== attSel) return false;
+        if (schSel !== 'ALL' && r.schools !== schSel) return false;
+        if (grdSel !== 'ALL' && r.gradeSeries !== grdSel) return false;
+        return true;
+      });
+
+
+      document.getElementById('bi-record-count').innerText = currentlyFilteredSubsetCache.length.toLocaleString();
+
+
+      let uniqueLearnersSet = new Set();
+      let totalHours = 0;
+      let uniqueCoursesSet = new Set();
+
+
+      currentlyFilteredSubsetCache.forEach(r => {
+        if (r.empId) uniqueLearnersSet.add(r.empId);
+        if (r.courseName) uniqueCoursesSet.add(r.courseName);
+        totalHours += r.totalHours;
+      });
+
+
+      let ulCount = uniqueLearnersSet.size;
+      let courseCount = uniqueCoursesSet.size;
+      let avgHours = ulCount > 0 ? (totalHours / ulCount) : 0;
+
+
+      document.getElementById('bi-kpi-ul').innerText = ulCount.toLocaleString();
+      document.getElementById('bi-kpi-tlh').innerText = totalHours >= 1000 ? (totalHours / 1000).toFixed(1) + 'K' : totalHours.toFixed(0);
+      document.getElementById('bi-kpi-alh').innerText = avgHours.toFixed(1);
+      document.getElementById('bi-kpi-courses').innerText = courseCount.toLocaleString();
+
+
+      renderGradeAttendanceChart(currentlyFilteredSubsetCache);
+      renderLobAttendanceChart(currentlyFilteredSubsetCache);
+      renderHoursByPhaseChart(currentlyFilteredSubsetCache);
+      renderModeOfLearningChart(currentlyFilteredSubsetCache);
+    }
+
+
+    // 📥 CLIENT-SIDE RE-ROUTED CSV COMPILE ENGINE
+    function downloadFilteredBIEngineCSV() {
+      if (!currentlyFilteredSubsetCache || currentlyFilteredSubsetCache.length === 0) {
+        alert("There is no filtered data matching your current settings to export.");
+        return;
+      }
+
+
+      // Explicitly define columns requested by the user
+      const headers = [
+        "Type of Training", "Schools", "Program Name", "Course Name",
+        "EMPID", "NAME", "GRADE SERIES", "LOB", "Product Line",
+        "Attendance Status", "Total Training Hours"
+      ];
+
+
+      // Helper function to safely wrap and escape commas/quotes in data cells
+      const escapeCSVField = (val) => {
+        let str = String(val === undefined || val === null ? '' : val).trim();
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          str = '"' + str.replace(/"/g, '""') + '"';
+        }
+        return str;
+      };
+
+
+      // 1. Write the headers row
+      let csvContent = headers.join(",") + "\n";
+
+
+      // 2. Map row data properties from the filtered rows array cache
+      currentlyFilteredSubsetCache.forEach(r => {
+        let lineValues = [
+          escapeCSVField(r.typeOfTraining),
+          escapeCSVField(r.schools),
+          escapeCSVField(r.programName),
+          escapeCSVField(r.courseName),
+          escapeCSVField(r.empId),
+          escapeCSVField(r.name),
+          escapeCSVField(r.gradeSeries),
+          escapeCSVField(r.lob),
+          escapeCSVField(r.productLine),
+          escapeCSVField(r.attendanceStatus),
+          escapeCSVField(r.totalHours)
+        ];
+        csvContent += lineValues.join(",") + "\n";
+      });
+
+
+      // 3. Construct a virtual anchor tag and trigger download action instantly
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+     
+      link.setAttribute("href", url);
+      link.setAttribute("download", "Filtered_MIS_Learning_Data_Export.csv");
+      link.style.visibility = 'hidden';
+     
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+   
+    function renderGradeAttendanceChart(dataset) {
+      let matrix = {};
+      dataset.forEach(r => {
+        let g = r.gradeSeries || 'Unknown';
+        let status = r.attendanceStatus || 'Absent';
+        if (!matrix[g]) matrix[g] = { Present: 0, Absent: 0 };
+        if (status.toLowerCase().includes('present')) matrix[g].Present++;
+        else matrix[g].Absent++;
+      });
+
+
+      let arr = [['Grade Series', 'Present', 'Absent']];
+      Object.keys(matrix).sort().forEach(k => {
+        arr.push([k, matrix[k].Present, matrix[k].Absent]);
+      });
+
+
+      if(arr.length === 1) arr.push(['No Data', 0, 0]);
+
+
+      let data = google.visualization.arrayToDataTable(arr);
+      let options = {
+        colors: ['#12341D', '#AE7F2E'],
+        chartArea: { width: '85%', height: '70%', top: 20 },
+        legend: { position: 'top', textStyle: { fontSize: 9, fontName: 'Inter' } },
+        vAxis: { textStyle: { fontSize: 9, fontName: 'Inter' } },
+        hAxis: { textStyle: { fontSize: 9, fontName: 'Inter', color: '#000000', bold: true } }
+      };
+      new google.visualization.ColumnChart(document.getElementById('chart-bi-grade-attendance')).draw(data, options);
+    }
+
+
+    function renderLobAttendanceChart(dataset) {
+      let matrix = {};
+      dataset.forEach(r => {
+        let lobName = r.lob || 'Unknown';
+        let status = r.attendanceStatus || 'Absent';
+        if (!matrix[lobName]) matrix[lobName] = { Present: 0, Absent: 0 };
+        if (status.toLowerCase().includes('present')) matrix[lobName].Present++;
+        else matrix[lobName].Absent++;
+      });
+
+
+      let arr = [['LOB', 'Present', 'Absent']];
+      Object.keys(matrix).sort().forEach(k => {
+        arr.push([k, matrix[k].Present, matrix[k].Absent]);
+      });
+
+
+      if(arr.length === 1) arr.push(['No Data', 0, 0]);
+
+
+      let data = google.visualization.arrayToDataTable(arr);
+      let options = {
+        colors: ['#12341D', '#AE7F2E'],
+        chartArea: { width: '85%', height: '70%', top: 20 },
+        legend: { position: 'top', textStyle: { fontSize: 9, fontName: 'Inter' } },
+        vAxis: { textStyle: { fontSize: 9, fontName: 'Inter' } },
+        hAxis: { textStyle: { fontSize: 9, fontName: 'Inter', color: '#000000', bold: true }, slantedText: true, slantedTextAngle: 30 }
+      };
+      new google.visualization.ColumnChart(document.getElementById('chart-bi-lob-attendance')).draw(data, options);
+    }
+
+
+    function renderHoursByPhaseChart(dataset) {
+      let matrix = { 'Q1': 0, 'Q2': 0, 'Q3': 0, 'Q4': 0 };
+      dataset.forEach(r => {
+        let q = r.quarter || '';
+        if (matrix.hasOwnProperty(q)) matrix[q] += r.totalHours;
+      });
+
+
+      let arr = [['Quarter', 'Total Training Hours']];
+      ['Q4', 'Q3', 'Q2', 'Q1'].forEach(q => {
+        arr.push([q, matrix[q]]);
+      });
+
+
+      let data = google.visualization.arrayToDataTable(arr);
+      let options = {
+        colors: ['#12341D'],
+        chartArea: { width: '85%', height: '70%', top: 20 },
+        legend: { position: 'none' },
+        vAxis: { textStyle: { fontSize: 9, fontName: 'Inter' } },
+        hAxis: { textStyle: { fontSize: 9, fontName: 'Inter', color: '#000000', bold: true } }
+      };
+      new google.visualization.ColumnChart(document.getElementById('chart-bi-hours-phase')).draw(data, options);
+    }
+
+
+    function renderModeOfLearningChart(dataset) {
+      let matrix = {};
+      dataset.forEach(r => {
+        let mode = r.trainingMode || 'In-Person';
+        matrix[mode] = (matrix[mode] || 0) + r.totalHours;
+      });
+
+
+      let arr = [['Mode', 'Total Training Hours']];
+      Object.keys(matrix).forEach(k => {
+        arr.push([k, matrix[k]]);
+      });
+
+
+      if(arr.length === 1) arr.push(['No Data', 0]);
+
+
+      let data = google.visualization.arrayToDataTable(arr);
+      let options = {
+        colors: ['#12341D'],
+        chartArea: { width: '75%', height: '75%', top: 15 },
+        legend: { position: 'none' },
+        hAxis: { textStyle: { fontSize: 9, fontName: 'Inter' } },
+        vAxis: { textStyle: { fontSize: 9, fontName: 'Inter', color: '#000000', bold: true } }
+      };
+      new google.visualization.BarChart(document.getElementById('chart-bi-mode')).draw(data, options);
+    }
+
+
+    function exitMetricDrilldown() {
+      document.getElementById('metric-drilldown-view').classList.add('hidden');
+      document.getElementById('homepage-view').classList.remove('hidden');
+    }
+
+
+    function showHomepage() {
+      document.getElementById('drilldown-view').classList.add('hidden');
+      document.getElementById('homepage-view').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
+
