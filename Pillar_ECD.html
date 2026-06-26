@@ -1,36 +1,14 @@
-<div onclick="callBackendCanvas('Early Career Development')" class="interactive-card bg-white rounded-3xl p-6 shadow-md border-t-8 border-[#21552F] flex flex-col justify-between cursor-pointer group min-h-[200px]">
-    <div>
-      <div class="flex justify-between items-start">
-        <span class="text-[9px] font-black bg-[#21552F]/10 text-[#21552F] border border-[#21552F]/20 px-2.5 py-1 rounded-full uppercase tracking-wider">Strategic Stream 01</span>
-        <span class="text-xs text-slate-300 group-hover:text-[#21552F] group-hover:translate-x-1 transition font-bold uppercase tracking-widest">Explore →</span>
-      </div>
-      <h3 class="text-xl font-black text-[#12341D] tracking-tight mt-4 group-hover:text-[#21552F] transition">Early Career Development</h3>
-      <p class="text-xs text-slate-500 leading-relaxed font-medium mt-1.5">Accelerated onboarding tracks, intensive technical bootcamps, and cross-functional engineering exposure.</p>
+<div onclick="openPillar('Early Career Development')" class="interactive-card bg-white rounded-3xl p-6 shadow-md border-t-8 border-[#21552F] flex flex-col justify-between cursor-pointer group min-h-[200px]">
+  <div>
+    <div class="flex justify-between items-start">
+      <span class="text-[9px] font-black bg-[#21552F]/10 text-[#21552F] border border-[#21552F]/20 px-2.5 py-1 rounded-full uppercase tracking-wider">Strategic Stream 01</span>
+      <span class="text-xs text-slate-200 group-hover:text-[#21552F] group-hover:translate-x-1 transition font-bold uppercase tracking-widest">Explore →</span>
     </div>
-    <div class="mt-6 pt-3 border-t border-slate-50 flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-      <span>4 Operational Tracks</span>
-      <span class="text-[#AE7F2E]">Active Deployment</span>
-    </div>
+    <h3 class="text-xl font-black text-[#12341D] tracking-tight mt-4">Early Career Development</h3>
+    <p class="text-xs text-slate-500 leading-relaxed font-medium mt-1.5">Accelerated onboarding tracks, intensive technical bootcamps, and cross-functional engineering exposure.</p>
   </div>
-  
-  <script>
-    // Inside the <script> tags of Pillar_ECD.html (and other individual files)
-  function callBackendCanvas(pillarName) {
-    console.log('call the backend canvas');
-    
-    google.script.run
-      .withSuccessHandler(function(returnedPillarName) {
-        console.log("Server finished working for: " + returnedPillarName);
-        
-        // Keep your 'document' interface manipulations here where they belong!
-        document.getElementById('homepage-view').classList.add('hidden');
-        if (typeof openPillar === "function") {
-          openPillar(returnedPillarName);
-        }
-      })
-      .withFailureHandler(function(error) {
-        console.error("Connection failed: ", error.message);
-      })
-      .loadPillarCanvas(pillarName);
-  }
-    </script>
+  <div class="mt-6 pt-3 border-t border-slate-50 flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+    <span>4 Operational Tracks</span>
+    <span class="text-[#AE7F2E]">Active Deployment</span>
+  </div>
+</div>

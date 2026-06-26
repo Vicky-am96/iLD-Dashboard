@@ -1,52 +1,71 @@
-// Master Configuration Map containing all 8 live Strategic Pillars
+// ============================================================
+// ✏️ VIBE CODER ZONE — Edit this config to add/update pillars
+// Each pillar needs: id, tabs, color, accent, streamLabel, description
+// ============================================================
 const DASHBOARD_CONFIG = {
   "Early Career Development": {
-    id: "1xygMOiZrXKV7NGMhLoIk3UVtFsvkYmXd1vnokjFQA5Y",
-    tabs: ["FTE Bootcamp", "MCA Internship", "FDEs", "ImpactX"],
-    color: "#21552F", // Primary Green
-    accent: "#AE7F2E" // Gold
+    id: "1xygMOiZrXKV7NGMhLoIk3UVtFsvkYmXd1vnokjFQA5Y", // ✏️ Sheet ID
+    tabs: ["FTE Bootcamp", "MCA Internship", "FDEs", "ImpactX"], // ✏️ Tab names
+    color: "#21552F",
+    accent: "#AE7F2E",
+    streamLabel: "Strategic Stream 01",
+    description: "Accelerated onboarding tracks, intensive technical bootcamps, and cross-functional engineering exposure."
   },
   "eMACH Academy": {
-    id: "1GC3NVsacRGAWVfdnfbV4FJo-22hrWrjlq8c7NydTIDU",
-    tabs: ["iTurmeric Certification", "Enabling 4S"],
+    id: "1GC3NVsacRGAWVfdnfbV4FJo-22hrWrjlq8c7NydTIDU", // ✏️ Sheet ID
+    tabs: ["iTurmeric Certification", "Enabling 4S"], // ✏️ Tab names
     color: "#21552F",
-    accent: "#478159" // Secondary Green
+    accent: "#478159",
+    streamLabel: "Strategic Stream 02",
+    description: "Architecture blueprints, system design fundamentals, and enterprise-grade execution training patterns."
   },
   "PF Academy (Purple Fabric Academy)": {
-    id: "12N5iwPYpuePzFE30M2AP6G73nbxJjqHQOn9lvbZm-NQ",
-    tabs: ["L1 Digital Module", "L2 Business Impact AI", "Internal Adoption", "External Partner"],
-    color: "#4E0973", // Brand Purple
-    accent: "#7A53A2" // Light Purple
+    id: "12N5iwPYpuePzFE30M2AP6G73nbxJjqHQOn9lvbZm-NQ", // ✏️ Sheet ID
+    tabs: ["L1 Digital Module", "L2 Business Impact AI", "Internal Adoption", "External Partner"], // ✏️ Tab names
+    color: "#4E0973",
+    accent: "#7A53A2",
+    streamLabel: "Strategic Stream 03",
+    description: "Digital adoption modules, AI-driven business impact programs, and partner enablement tracks."
   },
   "Skill Development": {
-    id: "1hHVpxUaoL1VIBLymVCxEQSD9_Z4wkpf_nvbqB_hLwx8",
-    tabs: ["TechLead Program", "Monthly Calendar", "Domain Delphi", "Full Stack Developer"],
+    id: "1hHVpxUaoL1VIBLymVCxEQSD9_Z4wkpf_nvbqB_hLwx8", // ✏️ Sheet ID
+    tabs: ["TechLead Program", "Monthly Calendar", "Domain Delphi", "Full Stack Developer"], // ✏️ Tab names
     color: "#21552F",
-    accent: "#AE7F2E"
+    accent: "#AE7F2E",
+    streamLabel: "Strategic Stream 04",
+    description: "Technical upskilling, leadership tracks, and domain-specific capability development programs."
   },
   "Managerial Development": {
-    id: "1Pggj0ErPQRVuNUngynD30xQOAzHT2oDCXBOEpOV9HOg",
-    tabs: ["Mid-Managerial Program"],
+    id: "1Pggj0ErPQRVuNUngynD30xQOAzHT2oDCXBOEpOV9HOg", // ✏️ Sheet ID
+    tabs: ["Mid-Managerial Program"], // ✏️ Tab names
     color: "#21552F",
-    accent: "#E1B58E" // Warm Secondary Sand
+    accent: "#E1B58E",
+    streamLabel: "Strategic Stream 05",
+    description: "Mid-management excellence, people leadership frameworks, and business acumen building programs."
   },
   "Leadership Development": {
-    id: "1flFSZtPfhvn9IyOQEwBhRNUtlz4z3D4HHuJEvJZSiI8",
-    tabs: ["LDAP-1", "LDAP-2"],
-    color: "#12341D", // Deep Forest Green
-    accent: "#AE7F2E"
+    id: "1flFSZtPfhvn9IyOQEwBhRNUtlz4z3D4HHuJEvJZSiI8", // ✏️ Sheet ID
+    tabs: ["LDAP-1", "LDAP-2"], // ✏️ Tab names
+    color: "#12341D",
+    accent: "#AE7F2E",
+    streamLabel: "Strategic Stream 06",
+    description: "Senior leadership acceleration, executive development, and organizational strategy programs."
   },
   "Voice of Associates (Testimonials)": {
-    id: "YOUR_TESTIMONIALS_AND_EXPERTS_SHEET_ID_HERE", // 💡 Put your new sheet ID here
-    tabs: ["Testimonials Data"], // 💡 Name of your tab for testimonials
-    color: "#AE7F2E", // Gold themed card
-    accent: "#21552F"
+    id: "YOUR_TESTIMONIALS_AND_EXPERTS_SHEET_ID_HERE", // ✏️ Put your sheet ID here
+    tabs: ["Testimonials Data"], // ✏️ Tab name
+    color: "#AE7F2E",
+    accent: "#21552F",
+    streamLabel: "Feedback Portal",
+    description: "Direct program feedback, training evaluation logs, and active cohort testimonials from live tracks."
   },
   "L&D PF Digital Experts & Web Apps": {
-    id: "YOUR_TESTIMONIALS_AND_EXPERTS_SHEET_ID_HERE", // 💡 Put your new sheet ID here (can be same sheet, separate tab)
-    tabs: ["Driving Results Team"], // 💡 Name of your tab for agents
-    color: "#1E3A8A", // Premium Royal Blue themed card
-    accent: "#3B82F6"
+    id: "YOUR_TESTIMONIALS_AND_EXPERTS_SHEET_ID_HERE", // ✏️ Put your sheet ID here
+    tabs: ["Driving Results Team"], // ✏️ Tab name
+    color: "#1E3A8A",
+    accent: "#3B82F6",
+    streamLabel: "Digital Experts",
+    description: "Internal digital expertise development, web application capability building, and results-driven teams."
   }
 };
 /**
@@ -361,6 +380,18 @@ function getMetricDrilldownData() {
     Logger.log("Error in getMetricDrilldownData: " + err.toString());
     return { error: err.toString() };
   }
+}
+
+
+// Required by Pillar_ECD.html's legacy server-side call pattern — just echoes the name back
+function loadPillarCanvas(pillarName) {
+  Logger.log('loadPillarCanvas: ' + pillarName);
+  return pillarName;
+}
+
+
+function getLastRefreshedTimestamp() {
+  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd MMM yyyy, hh:mm a");
 }
 
 
