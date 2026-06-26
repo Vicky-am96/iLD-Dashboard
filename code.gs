@@ -1,11 +1,31 @@
 // ============================================================
 // ✏️ VIBE CODER ZONE — Edit this config to add/update pillars
-// Each pillar needs: id, tabs, color, accent, streamLabel, description
+//
+// CARD ORDER: The order of pillars here = the order cards appear on screen.
+//             Move a block up/down to reorder the dashboard cards.
+//
+// PER-TAB LAYOUTS — set tabLayouts to control how each tab renders:
+//   "auto"        → smart detect (Drive links → gallery, else → table)
+//   "gallery"     → image cards with lightbox zoom
+//   "table"       → scrollable data table with status badge colouring
+//   "kpi"         → metrics panel only (no table or gallery)
+//   "testimonial" → styled quote cards (best for feedback data)
+//
+// PILLAR BANNER — set pillarBanner to a raw HTML string to show a
+//   custom info banner at the top of that pillar's drilldown view.
+//   Example: pillarBanner: `<div class="bg-green-50 p-4 rounded-xl text-sm">Note here</div>`,
 // ============================================================
 const DASHBOARD_CONFIG = {
   "Early Career Development": {
     id: "1xygMOiZrXKV7NGMhLoIk3UVtFsvkYmXd1vnokjFQA5Y", // ✏️ Sheet ID
-    tabs: ["FTE Bootcamp", "MCA Internship", "FDEs", "ImpactX"], // ✏️ Tab names
+    tabs: ["FTE Bootcamp", "MCA Internship", "FDEs", "ImpactX"], // ✏️ Must match sheet tab names exactly
+    tabLayouts: {                   // ✏️ Set layout per tab — remove a line to use "auto"
+      "FTE Bootcamp":   "gallery",  //    Photos/cohort images → gallery
+      "MCA Internship": "table",
+      "FDEs":           "table",
+      "ImpactX":        "auto"
+    },
+    // pillarBanner: `<div class="bg-[#21552F]/10 border border-[#21552F]/20 p-4 rounded-xl text-sm text-[#21552F] font-medium">ECD note: cohort photos load in FTE Bootcamp tab.</div>`,
     color: "#21552F",
     accent: "#AE7F2E",
     streamLabel: "Strategic Stream 01",
@@ -13,7 +33,11 @@ const DASHBOARD_CONFIG = {
   },
   "eMACH Academy": {
     id: "1GC3NVsacRGAWVfdnfbV4FJo-22hrWrjlq8c7NydTIDU", // ✏️ Sheet ID
-    tabs: ["iTurmeric Certification", "Enabling 4S"], // ✏️ Tab names
+    tabs: ["iTurmeric Certification", "Enabling 4S"],
+    tabLayouts: {
+      "iTurmeric Certification": "auto",
+      "Enabling 4S":             "auto"
+    },
     color: "#21552F",
     accent: "#478159",
     streamLabel: "Strategic Stream 02",
@@ -21,7 +45,13 @@ const DASHBOARD_CONFIG = {
   },
   "PF Academy (Purple Fabric Academy)": {
     id: "12N5iwPYpuePzFE30M2AP6G73nbxJjqHQOn9lvbZm-NQ", // ✏️ Sheet ID
-    tabs: ["L1 Digital Module", "L2 Business Impact AI", "Internal Adoption", "External Partner"], // ✏️ Tab names
+    tabs: ["L1 Digital Module", "L2 Business Impact AI", "Internal Adoption", "External Partner"],
+    tabLayouts: {
+      "L1 Digital Module":      "table",
+      "L2 Business Impact AI":  "auto",
+      "Internal Adoption":      "auto",
+      "External Partner":       "auto"
+    },
     color: "#4E0973",
     accent: "#7A53A2",
     streamLabel: "Strategic Stream 03",
@@ -29,7 +59,13 @@ const DASHBOARD_CONFIG = {
   },
   "Skill Development": {
     id: "1hHVpxUaoL1VIBLymVCxEQSD9_Z4wkpf_nvbqB_hLwx8", // ✏️ Sheet ID
-    tabs: ["TechLead Program", "Monthly Calendar", "Domain Delphi", "Full Stack Developer"], // ✏️ Tab names
+    tabs: ["TechLead Program", "Monthly Calendar", "Domain Delphi", "Full Stack Developer"],
+    tabLayouts: {
+      "TechLead Program":      "auto",
+      "Monthly Calendar":      "table",
+      "Domain Delphi":         "auto",
+      "Full Stack Developer":  "table"
+    },
     color: "#21552F",
     accent: "#AE7F2E",
     streamLabel: "Strategic Stream 04",
@@ -37,7 +73,10 @@ const DASHBOARD_CONFIG = {
   },
   "Managerial Development": {
     id: "1Pggj0ErPQRVuNUngynD30xQOAzHT2oDCXBOEpOV9HOg", // ✏️ Sheet ID
-    tabs: ["Mid-Managerial Program"], // ✏️ Tab names
+    tabs: ["Mid-Managerial Program"],
+    tabLayouts: {
+      "Mid-Managerial Program": "table"
+    },
     color: "#21552F",
     accent: "#E1B58E",
     streamLabel: "Strategic Stream 05",
@@ -45,7 +84,11 @@ const DASHBOARD_CONFIG = {
   },
   "Leadership Development": {
     id: "1flFSZtPfhvn9IyOQEwBhRNUtlz4z3D4HHuJEvJZSiI8", // ✏️ Sheet ID
-    tabs: ["LDAP-1", "LDAP-2"], // ✏️ Tab names
+    tabs: ["LDAP-1", "LDAP-2"],
+    tabLayouts: {
+      "LDAP-1": "table",
+      "LDAP-2": "table"
+    },
     color: "#12341D",
     accent: "#AE7F2E",
     streamLabel: "Strategic Stream 06",
@@ -53,7 +96,10 @@ const DASHBOARD_CONFIG = {
   },
   "Voice of Associates (Testimonials)": {
     id: "YOUR_TESTIMONIALS_AND_EXPERTS_SHEET_ID_HERE", // ✏️ Put your sheet ID here
-    tabs: ["Testimonials Data"], // ✏️ Tab name
+    tabs: ["Testimonials Data"],
+    tabLayouts: {
+      "Testimonials Data": "testimonial"  // ✏️ Renders as styled quote cards
+    },
     color: "#AE7F2E",
     accent: "#21552F",
     streamLabel: "Feedback Portal",
@@ -61,7 +107,10 @@ const DASHBOARD_CONFIG = {
   },
   "L&D PF Digital Experts & Web Apps": {
     id: "YOUR_TESTIMONIALS_AND_EXPERTS_SHEET_ID_HERE", // ✏️ Put your sheet ID here
-    tabs: ["Driving Results Team"], // ✏️ Tab name
+    tabs: ["Driving Results Team"],
+    tabLayouts: {
+      "Driving Results Team": "auto"
+    },
     color: "#1E3A8A",
     accent: "#3B82F6",
     streamLabel: "Digital Experts",

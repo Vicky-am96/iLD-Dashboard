@@ -36,8 +36,8 @@
   <header id="main-header" class="bg-[#12341D] text-white py-4 px-6 shadow-md border-b-4 border-[#AE7F2E]">
     <div class="max-w-[90rem] mx-auto flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h1 class="text-xl lg:text-2xl font-extrabold tracking-tight">Quarterly Learning Dashboard</h1>
-        <p class="text-[10px] text-[#E1B58E] tracking-widest uppercase font-semibold mt-0.5">Accelerated Operations Enterprise Analytics</p>
+        <h1 class="text-xl lg:text-2xl font-extrabold tracking-tight">Quarterly Learning Dashboard</h1><!-- ✏️ Edit title here -->
+        <p class="text-[10px] text-[#E1B58E] tracking-widest uppercase font-semibold mt-0.5">Accelerated Operations Enterprise Analytics</p><!-- ✏️ Edit subtitle here -->
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <!-- Last refreshed -->
@@ -264,6 +264,9 @@
         <span id="active-pillar-title" class="text-[10px] font-bold text-[#12341D] uppercase tracking-widest bg-slate-50 px-4 py-1.5 rounded-lg border border-slate-100 text-center">Active Pillar</span>
       </div>
 
+      <!-- Per-pillar custom banner (set pillarBanner in DASHBOARD_CONFIG to show) -->
+      <div id="pillar-custom-banner" class="hidden rounded-xl overflow-hidden"></div>
+
       <!-- Sub-program tabs -->
       <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
         <nav id="subprogram-horizontal-navbar" class="flex items-center gap-2 min-w-max"></nav>
@@ -452,6 +455,16 @@
       document.getElementById('insights-magazine-canvas').innerHTML = '';
       document.getElementById('metrics-badges-grid').innerHTML = '';
 
+      // Show per-pillar custom banner if set in DASHBOARD_CONFIG
+      const banner = document.getElementById('pillar-custom-banner');
+      if (cfg.pillarBanner) {
+        banner.innerHTML = cfg.pillarBanner;
+        banner.classList.remove('hidden');
+      } else {
+        banner.innerHTML = '';
+        banner.classList.add('hidden');
+      }
+
       // Build sub-program tab nav
       const nav = document.getElementById('subprogram-horizontal-navbar');
       nav.innerHTML = '';
@@ -493,10 +506,11 @@
       document.getElementById('metrics-badges-grid').innerHTML = '';
 
       const cacheKey = pillarName + '::' + tabName;
+      const layout = ((globalMetadata[pillarName] || {}).tabLayouts || {})[tabName] || 'auto';
 
       // Use cached data if available
       if (pillarTabCache[cacheKey]) {
-        renderPillarTabContent(pillarTabCache[cacheKey]);
+        renderPillarTabContent(pillarTabCache[cacheKey], layout);
         return;
       }
 
@@ -504,7 +518,7 @@
       google.script.run
         .withSuccessHandler(data => {
           pillarTabCache[cacheKey] = data;
-          renderPillarTabContent(data);
+          renderPillarTabContent(data, layout);
         })
         .withFailureHandler(err => {
           document.getElementById('insights-magazine-canvas').innerHTML = `
@@ -516,12 +530,13 @@
         .getPillarTabData(pillarName, tabName);
     }
 
-    // ── Smart renderer — handles images, metrics, and learner tables ─
-    function renderPillarTabContent(data) {
+    // ── Multi-mode renderer — layout controlled by tabLayouts in DASHBOARD_CONFIG ─
+    // Modes: "auto" | "gallery" | "table" | "kpi" | "testimonial"
+    function renderPillarTabContent(data, layout) {
+      layout = layout || 'auto';
       const canvas = document.getElementById('insights-magazine-canvas');
       const metricsGrid = document.getElementById('metrics-badges-grid');
 
-      // Handle error response from backend
       if (data.error) {
         canvas.innerHTML = `
           <div class="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
@@ -538,13 +553,13 @@
         canvas.innerHTML = `
           <div class="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-10 text-center">
             <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">No data in this tab</p>
-            <p class="text-xs text-slate-300 mt-1">Add data to this tab in the Google Sheet and it will appear here.</p>
+            <p class="text-xs text-slate-300 mt-1">Add rows to this sheet tab and they will appear here.</p>
           </div>`;
         metricsGrid.innerHTML = '';
         return;
       }
 
-      // ── Classify each column ──────────────────────────────────────
+      // ── Classify columns (always needed for metrics panel) ────────
       const imageColumns = headers.filter(h => h && rows.some(r => {
         const v = String(r[h] || '');
         return v.includes('drive.google.com') || v.match(/\.(jpg|jpeg|png|gif|webp)/i);
@@ -559,10 +574,9 @@
 
       const textColumns = headers.filter(h => h && !imageColumns.includes(h) && !numericColumns.includes(h));
 
-      // ── Render metrics panel (right side) ────────────────────────
+      // ── Metrics panel (right side — always shown) ─────────────────
       const metricBadges = numericColumns.slice(0, 6).map(h => {
-        const vals = rows.map(r => parseFloat(r[h]) || 0);
-        const total = vals.reduce((s, v) => s + v, 0);
+        const total = rows.reduce((s, r) => s + (parseFloat(r[h]) || 0), 0);
         const display = total >= 1000 ? (total / 1000).toFixed(1) + 'K' : total % 1 === 0 ? total.toLocaleString() : total.toFixed(1);
         return `
           <div class="bg-[#12341D] text-white p-4 rounded-xl text-center border-b-4 border-[#AE7F2E]">
@@ -570,24 +584,55 @@
             <h4 class="text-2xl font-black mt-1 text-[#E1B58E]">${display}</h4>
           </div>`;
       });
-
-      // Always show row count as one badge
       metricBadges.push(`
         <div class="bg-[#12341D] text-white p-4 rounded-xl text-center border-b-4 border-[#AE7F2E]">
           <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Total Records</p>
           <h4 class="text-2xl font-black mt-1 text-[#E1B58E]">${rows.length.toLocaleString()}</h4>
         </div>`);
-
       metricsGrid.innerHTML = metricBadges.join('');
 
-      // ── Render content canvas (left side) ────────────────────────
-      if (imageColumns.length > 0) {
-        // IMAGE / GALLERY MODE — Drive links detected
-        const cards = rows.map(row => {
-          const imgUrl = row[imageColumns[0]] || '';
-          const caption = textColumns.map(h => row[h]).filter(v => v && v !== 'N/A').join(' — ');
-          const extraMetrics = numericColumns.map(h => `<span class="text-[10px] font-bold text-[#AE7F2E]">${h}: <span class="text-slate-700">${row[h]}</span></span>`).join('<span class="mx-1 text-slate-300">·</span>');
+      // ── Resolve display mode ──────────────────────────────────────
+      let mode = layout;
+      if (mode === 'auto') mode = imageColumns.length > 0 ? 'gallery' : 'table';
 
+      // ── KPI-only mode ─────────────────────────────────────────────
+      if (mode === 'kpi') {
+        canvas.innerHTML = `
+          <div class="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-10 text-center">
+            <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">Metrics Overview</p>
+            <p class="text-xs text-slate-400 mt-2">All ${rows.length.toLocaleString()} records are summarised in the panel on the right.</p>
+          </div>`;
+        return;
+      }
+
+      // ── Testimonial / quote-card mode ─────────────────────────────
+      if (mode === 'testimonial') {
+        const cards = rows.map(row => {
+          const textVals = textColumns.map(h => row[h]).filter(v => v && v !== 'N/A');
+          const quote = textVals[0] || '';
+          const attribution = textVals.slice(1).join(' · ');
+          return `
+            <div class="bg-white rounded-xl border border-[#AE7F2E]/30 shadow-sm p-5 space-y-3">
+              <svg class="w-8 h-8 text-[#AE7F2E]/30" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/>
+              </svg>
+              <p class="text-sm font-medium text-slate-700 italic leading-relaxed">"${quote}"</p>
+              ${attribution ? `<p class="text-xs font-bold text-[#AE7F2E] uppercase tracking-wider border-t border-[#AE7F2E]/20 pt-2">${attribution}</p>` : ''}
+            </div>`;
+        }).join('');
+        canvas.innerHTML = `<div class="grid grid-cols-1 gap-4">${cards}</div>`;
+        return;
+      }
+
+      // ── Gallery mode ──────────────────────────────────────────────
+      if (mode === 'gallery') {
+        const imgCol = imageColumns[0] || null;
+        const cards = rows.map(row => {
+          const imgUrl = imgCol ? (row[imgCol] || '') : '';
+          const caption = textColumns.map(h => row[h]).filter(v => v && v !== 'N/A').join(' — ');
+          const extraMetrics = numericColumns.map(h =>
+            `<span class="text-[10px] font-bold text-[#AE7F2E]">${h}: <span class="text-slate-700">${row[h]}</span></span>`
+          ).join('<span class="mx-1 text-slate-300">·</span>');
           return `
             <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               ${imgUrl ? `
@@ -602,40 +647,34 @@
                 </div>` : ''}
             </div>`;
         }).join('');
-
         canvas.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">${cards}</div>`;
-
-      } else {
-        // TABLE MODE — no images, render as scrollable data table
-        const colsToShow = [...textColumns, ...numericColumns].filter(h => h).slice(0, 8);
-
-        const headerRow = colsToShow.map(h => `<th class="p-2.5 text-left whitespace-nowrap">${h}</th>`).join('');
-        const dataRows = rows.slice(0, 150).map(row => {
-          const cells = colsToShow.map(h => {
-            const v = row[h] || '';
-            // Colour-code attendance/status-like values
-            if (/^(present|completed|pass|active|yes)$/i.test(v)) {
-              return `<td class="p-2.5"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-emerald-100 text-emerald-700">${v}</span></td>`;
-            }
-            if (/^(absent|failed|inactive|no|pending)$/i.test(v)) {
-              return `<td class="p-2.5"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-rose-100 text-rose-700">${v}</span></td>`;
-            }
-            return `<td class="p-2.5 text-slate-700">${v}</td>`;
-          }).join('');
-          return `<tr class="hover:bg-slate-50 transition">${cells}</tr>`;
-        }).join('');
-
-        canvas.innerHTML = `
-          <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-            <div class="overflow-x-auto">
-              <table class="w-full text-xs">
-                <thead><tr class="bg-[#12341D] text-white text-[10px] uppercase tracking-wider">${headerRow}</tr></thead>
-                <tbody class="divide-y divide-slate-50">${dataRows}</tbody>
-              </table>
-            </div>
-            ${rows.length > 150 ? `<div class="p-3 text-center text-xs text-slate-400 font-semibold border-t">Showing 150 of ${rows.length} records</div>` : ''}
-          </div>`;
+        return;
       }
+
+      // ── Table mode (default) ──────────────────────────────────────
+      const colsToShow = [...textColumns, ...numericColumns].filter(h => h).slice(0, 8);
+      const headerRow = colsToShow.map(h => `<th class="p-2.5 text-left whitespace-nowrap">${h}</th>`).join('');
+      const dataRows = rows.slice(0, 150).map(row => {
+        const cells = colsToShow.map(h => {
+          const v = row[h] || '';
+          if (/^(present|completed|pass|active|yes)$/i.test(v))
+            return `<td class="p-2.5"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-emerald-100 text-emerald-700">${v}</span></td>`;
+          if (/^(absent|failed|inactive|no|pending)$/i.test(v))
+            return `<td class="p-2.5"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-rose-100 text-rose-700">${v}</span></td>`;
+          return `<td class="p-2.5 text-slate-700">${v}</td>`;
+        }).join('');
+        return `<tr class="hover:bg-slate-50 transition">${cells}</tr>`;
+      }).join('');
+      canvas.innerHTML = `
+        <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead><tr class="bg-[#12341D] text-white text-[10px] uppercase tracking-wider">${headerRow}</tr></thead>
+              <tbody class="divide-y divide-slate-50">${dataRows}</tbody>
+            </table>
+          </div>
+          ${rows.length > 150 ? `<div class="p-3 text-center text-xs text-slate-400 font-semibold border-t">Showing 150 of ${rows.length} records</div>` : ''}
+        </div>`;
     }
 
     // ── Lightbox helpers ─────────────────────────────────────────
