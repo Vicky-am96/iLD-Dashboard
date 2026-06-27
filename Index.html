@@ -627,19 +627,34 @@
       // ── Gallery mode ──────────────────────────────────────────────
       if (mode === 'gallery') {
         const imgCol = imageColumns[0] || null;
+
+        if (!imgCol) {
+          canvas.innerHTML = `
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center space-y-2">
+              <p class="text-sm font-bold text-amber-700 uppercase tracking-widest">Gallery mode — no image column detected</p>
+              <p class="text-xs text-amber-600 leading-relaxed">
+                Make sure at least one cell in the column contains a Google Drive share link<br>
+                (e.g. <code class="bg-amber-100 px-1 rounded">https://drive.google.com/file/d/…/view?usp=sharing</code>)
+              </p>
+              <p class="text-xs text-amber-500">Also ensure the Drive file is shared as <strong>Anyone with the link → Viewer</strong>.</p>
+            </div>`;
+          return;
+        }
+
         const cards = rows.map(row => {
-          const imgUrl = imgCol ? (row[imgCol] || '') : '';
+          const imgUrl = row[imgCol] || '';
           const caption = textColumns.map(h => row[h]).filter(v => v && v !== 'N/A').join(' — ');
           const extraMetrics = numericColumns.map(h =>
             `<span class="text-[10px] font-bold text-[#AE7F2E]">${h}: <span class="text-slate-700">${row[h]}</span></span>`
           ).join('<span class="mx-1 text-slate-300">·</span>');
           return `
             <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              ${imgUrl ? `
-                <div class="cursor-zoom-in" onclick="openLightbox('${imgUrl.replace(/'/g, "\\'")}')">
-                  <img src="${imgUrl}" alt="${caption}" class="w-full object-cover" style="max-height:220px"
-                       onerror="this.parentElement.style.display='none'">
-                </div>` : ''}
+              <div class="cursor-zoom-in" onclick="openLightbox('${imgUrl.replace(/'/g, "\\'")}')">
+                ${imgUrl
+                  ? `<img src="${imgUrl}" alt="${caption}" class="w-full object-cover" style="max-height:220px" onerror="imgLoadError(this)">`
+                  : `<div class="bg-slate-50 h-32 flex items-center justify-center text-xs text-slate-300 font-medium">No image in this row</div>`
+                }
+              </div>
               ${caption || extraMetrics ? `
                 <div class="p-4 space-y-1.5">
                   ${caption ? `<p class="text-sm font-semibold text-slate-800 leading-snug">${caption}</p>` : ''}
@@ -684,6 +699,16 @@
       img.src = imgUrl;
       modal.classList.remove('hidden');
       setTimeout(() => modal.classList.add('opacity-100'), 10);
+    }
+
+    function imgLoadError(el) {
+      el.parentElement.innerHTML = `
+        <div class="bg-slate-100 h-32 flex items-center justify-center text-center p-4">
+          <div>
+            <p class="text-xs font-bold text-slate-400">Image not accessible</p>
+            <p class="text-[10px] text-slate-300 mt-1 leading-relaxed">Open the Drive file → Share<br>→ set to <strong>Anyone with the link</strong></p>
+          </div>
+        </div>`;
     }
 
     // ── BI Drilldown ──────────────────────────────────────────────
