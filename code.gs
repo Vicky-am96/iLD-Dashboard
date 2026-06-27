@@ -144,7 +144,21 @@ function include(filename) {
 
 function getDashboardMetadata() {
   Logger.log('getDashboardMetadata triggered');
-  return DASHBOARD_CONFIG;
+  // Return as ordered array — plain object key order is not guaranteed across GAS serialization
+  return Object.keys(DASHBOARD_CONFIG).map(function(name) {
+    var cfg = DASHBOARD_CONFIG[name];
+    return {
+      name:         name,
+      id:           cfg.id,
+      tabs:         cfg.tabs         || [],
+      tabLayouts:   cfg.tabLayouts   || {},
+      pillarBanner: cfg.pillarBanner || '',
+      color:        cfg.color,
+      accent:       cfg.accent,
+      streamLabel:  cfg.streamLabel,
+      description:  cfg.description
+    };
+  });
 }
 
 

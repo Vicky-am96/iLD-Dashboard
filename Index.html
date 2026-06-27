@@ -305,9 +305,10 @@
     // ── Boot ──────────────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', () => {
       google.script.run
-        .withSuccessHandler(metadata => {
-          globalMetadata = metadata;
-          renderPillarCards(metadata);
+        .withSuccessHandler(pillarList => {
+          // Build name→config lookup for openPillar() while preserving order for card rendering
+          pillarList.forEach(p => { globalMetadata[p.name] = p; });
+          renderPillarCards(pillarList);
         })
         .getDashboardMetadata();
 
@@ -405,13 +406,14 @@
       }).join('');
     }
 
-    // ── Render pillar cards dynamically from metadata ─────────────
-    // ✏️ To add a new pillar: update DASHBOARD_CONFIG in code.gs only — no HTML changes needed
-    function renderPillarCards(metadata) {
+    // ── Render pillar cards dynamically from ordered array ───────
+    // ✏️ To add or reorder pillars: edit DASHBOARD_CONFIG in code.gs only
+    function renderPillarCards(pillarList) {
       const grid = document.getElementById('pillars-grid');
       grid.innerHTML = '';
 
-      Object.entries(metadata).forEach(([name, cfg]) => {
+      pillarList.forEach(cfg => {
+        const name = cfg.name;
         const trackCount = (cfg.tabs || []).length;
         const label = cfg.streamLabel || 'Stream';
         const desc = cfg.description || '';
